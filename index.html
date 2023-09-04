@@ -269,80 +269,115 @@
         const speedControl = document.getElementById('speedControl');
         const speedValue = document.getElementById('speedValue');
         const aslSignsContainer = document.getElementById('aslSignsContainer');
-
+    
         canvas.width = 640; // Set the canvas width
         canvas.height = 480; // Set the canvas height
-
-        let images = []; // Array to store selected image files
+    
+        let images = {}; // Object to store selected image files
         let slideDuration = 3000; // Default duration: 3 seconds per slide
         let timeoutId = null;
-
-        let currentImageIndex = 0;
-
+        let imageIndex = 0;
+    
         speedControl.addEventListener('input', handleSpeedChange);
-
+    
         function handleSpeedChange() {
             slideDuration = 1000 / parseFloat(speedControl.value); // Calculate duration based on speed
             speedValue.textContent = `Speed: ${speedControl.value}`;
             clearTimeout(timeoutId);
             showNextImage();
         }
-
+    
         function showNextImage() {
-            if (images.length === 0) {
+            if (Object.keys(images).length === 0) {
                 return;
             }
-
+    
+            const characters = Object.keys(images);
+            const currentCharacter = characters[imageIndex];
+    
             const img = new Image();
-            img.src = images[currentImageIndex];
+            img.src = images[currentCharacter];
             img.onload = () => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
+    
                 timeoutId = setTimeout(() => {
-                    currentImageIndex = (currentImageIndex + 1) % images.length;
+                    imageIndex = (imageIndex + 1) % characters.length;
                     showNextImage();
                 }, slideDuration);
             };
         }
-
+    
         function displayASLSigns() {
             const wordInput = document.getElementById("wordInput");
             const word = wordInput.value.toUpperCase();
-
-            images = []; // Reset the images array
+    
+            images = {}; // Reset the images object
             aslSignsContainer.innerHTML = "";
-
-            for (let i = 0; i < word.length; i++) {
-                const character = word[i];
+    
+            const phraseImageMapping = {
+                "HELLO": "hello.png",
+                "YES": "yes.png",
+                "NO": "no.png",
+                "I LOVE YOU": "i_love_you.png",
+                "GOODBYE": "goodbye.png",
+                "PLEASE": "please.png",
+                "SORRY": "sorry.png",
+                "THANK YOU": "thank_you.png",
+            };
+    
+            let i = 0;
+            while (i < word.length) {
+                let character = word[i];
+    
+                // Check if the remaining substring is a phrase
+                for (let j = i + 1; j <= word.length; j++) {
+                    const phrase = word.slice(i, j);
+                    if (phraseImageMapping[phrase]) {
+                        character = phrase; // Use the entire phrase
+                        i = j - 1; // Update the outer loop index
+                        break;
+                    }
+                }
+    
                 const container = document.createElement("div");
                 container.classList.add("sign-container");
-
-                if (/^[A-Z]$/.test(character)) {
-                    const img = document.createElement("img");
-                    img.src = `${character}.png`;
-                    img.alt = `ASL sign for ${character}`;
-                    container.appendChild(img);
-
+    
+                if (/^[A-Z\s]+$/.test(character)) {
+                    if (phraseImageMapping[character]) {
+                        const img = document.createElement("img");
+                        img.src = phraseImageMapping[character];
+                        img.alt = `ASL sign for ${character}`;
+                        container.appendChild(img);
+                        images[character] = img.src; // Add the image source to the images object
+                    } else if (character === " ") {
+                        // Display a blank space for each word and phrase separation
+                        const blankSpan = document.createElement("span");
+                        blankSpan.textContent = " ";
+                        container.appendChild(blankSpan);
+                    } else {
+                        const img = document.createElement("img");
+                        img.src = `${character}.png`;
+                        img.alt = `ASL sign for ${character}`;
+                        container.appendChild(img);
+                        images[character] = img.src; // Add the image source to the images object
+                    }
+    
                     const alphabetSpan = document.createElement("span");
                     alphabetSpan.textContent = character;
                     container.appendChild(alphabetSpan);
-
-                    images.push(img.src); // Add the image source to the images array
-                } else if (character === " ") {
-                    const emptySpan = document.createElement("span");
-                    emptySpan.textContent = " ";
-                    container.appendChild(emptySpan);
                 } else {
                     const message = document.createElement("span");
                     message.textContent = `No ASL sign found for "${character}". `;
                     container.appendChild(message);
                 }
-
+    
                 aslSignsContainer.appendChild(container);
+                i++;
             }
-
-            currentImageIndex = 0; // Reset the image index for slideshow
+    
+            // Reset slideshow variables
+            imageIndex = 0;
             clearTimeout(timeoutId);
             showNextImage();
         }
